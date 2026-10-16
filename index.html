@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <meta content="web_standard" name="shell-type" />
+  <title>Multi-Vector Threat Detection Engine | Autonomous Executive Console</title>
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+    rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+    rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              dark: "#050813",
+              card: "#0d1527",
+              cardBorder: "rgba(30, 41, 59, 0.8)",
+              accent: "#38bdf8",
+              emerald: "#10b981",
+              crimson: "#f43f5e",
+              amber: "#f59e0b"
+            }
+          },
+          fontFamily: {
+            sans: ["Inter", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
+            mono: ["JetBrains Mono", "monospace"]
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    @layer base {
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #030712;
+        color: #f1f5f9;
+        scroll-behavior: smooth;
+        overflow-x: hidden;
+      }
+    }
+
+    /* Fixed Canvas sitting on top of body bg, beneath content */
+    #bgCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Ambient Cursor Spotlight */
+    #cursorSpotlight {
+      pointer-events: none;
+      position: fixed;
+      width: 700px;
+      height: 700px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.12) 0%, rgba(99, 102, 241, 0.05) 40%, transparent 70%);
+      transform: translate(-50%, -50%);
+      transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 1;
+    }
+
+    /* Precision Cyber Cursor Reticle */
+    #cyberDot {
+      pointer-events: none;
+      position: fixed;
+      width: 6px;
+      height: 6px;
+      background-color: #38bdf8;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 9999;
+      box-shadow: 0 0 10px #38bdf8, 0 0 20px #38bdf8;
+    }
+
+    #cyberRing {
+      pointer-events: none;
+      position: fixed;
+      width: 34px;
+      height: 34px;
+      border: 1.5px solid rgba(56, 189, 248, 0.6);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 9998;
+      transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), height 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s;
+    }
+
+    /* Rotating Conic Gradient Neon Border */
+    @keyframes rotateConic {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    .neon-border-box {
+      position: relative;
+      overflow: hidden;
+      border-radius: 1rem;
+    }
+
+    .neon-border-box::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: conic-gradient(from 0deg, transparent 0%, transparent 60%, rgba(56, 189, 248, 0.7) 80%, rgba(99, 102, 241, 0.9) 100%);
+      animation: rotateConic 4s linear infinite;
+      z-index: 0;
+      opacity: 0;
+      transition: opacity 0.4s ease-in-out;
+    }
+
+    .neon-border-box.is-active::before {
+      opacity: 1;
+      animation: rotateConic 1.8s linear infinite;
+    }
+
+    .neon-border-box.is-threat::before {
+      background: conic-gradient(from 0deg, transparent 0%, transparent 60%, rgba(244, 63, 94, 0.8) 80%, #ef4444 100%);
+      opacity: 1;
+      animation: rotateConic 2.5s linear infinite;
+    }
+
+    .neon-inner-content {
+      position: relative;
+      z-index: 1;
+      border-radius: inherit;
+    }
+
+    /* Multi-Spectrum Scanning Laser Beam */
+    @keyframes laserSweep {
+      0% {
+        top: 0%;
+        opacity: 0;
+      }
+
+      10% {
+        opacity: 1;
+      }
+
+      90% {
+        opacity: 1;
+      }
+
+      100% {
+        top: 100%;
+        opacity: 0;
+      }
+    }
+
+    .laser-beam {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent 0%, rgba(56, 189, 248, 0.9) 20%, #38bdf8 50%, rgba(99, 102, 241, 0.9) 80%, transparent 100%);
+      box-shadow: 0 0 20px #38bdf8, 0 0 36px rgba(56, 189, 248, 0.8), 0 0 8px #ffffff;
+      animation: laserSweep 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+      z-index: 20;
+    }
+
+    /* Radar Sonar Rotating Sweep */
+    @keyframes radarSpin {
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .radar-sweep-line {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 140%;
+      height: 140%;
+      margin-left: -70%;
+      margin-top: -70%;
+      background: conic-gradient(from 0deg, rgba(56, 189, 248, 0.3) 0deg, transparent 60deg, transparent 360deg);
+      border-radius: 50%;
+      animation: radarSpin 2.4s linear infinite;
+      pointer-events: none;
+      z-index: 15;
+    }
+
+    /* Impactful Threat Pulse Overlay */
+    #threatVignette {
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      box-shadow: inset 0 0 160px rgba(244, 63, 94, 0.5), inset 0 0 60px rgba(244, 63, 94, 0.7);
+      opacity: 0;
+      transition: opacity 0.5s ease-out;
+      z-index: 999;
+    }
+
+    /* 3D Perspective Card Tilt */
+    .tilt-card {
+      transform-style: preserve-3d;
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s, border-color 0.3s;
+    }
+
+    /* Entrance Reveal */
+    @keyframes revealUp {
+      from {
+        opacity: 0;
+        transform: translateY(18px) scale(0.98);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .animate-reveal {
+      animation: revealUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* Scanning Cyber Grid Overlay Effect on Dropzone */
+    .scan-mesh-overlay {
+      background-size: 24px 24px;
+      background-image:
+        linear-gradient(to right, rgba(56, 189, 248, 0.08) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(56, 189, 248, 0.08) 1px, transparent 1px);
+    }
+  </style>
+</head>
+
+<body
+  class="bg-[#030712] min-h-screen font-sans text-slate-100 antialiased selection:bg-sky-500/30 selection:text-sky-200 relative">
+
+  <!-- Full-Screen Emergency Threat Vignette Pulse -->
+  <div id="threatVignette"></div>
+
+  <!-- Dynamic Cyber Neural Mesh Background Canvas -->
+  <canvas id="bgCanvas"></canvas>
+  <div id="cursorSpotlight"></div>
+  <div id="cyberDot"></div>
+  <div id="cyberRing"></div>
+
+  <!-- 1. Header Bar -->
+  <header class="sticky top-0 z-50 w-full border-b border-slate-800/80 bg-[#060b18]/80 backdrop-blur-xl transition-all">
+    <div class="max-w-6xl mx-auto px-6 h-18 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <div
+          class="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 text-lg shadow-[0_0_15px_rgba(56,189,248,0.25)] transition-transform duration-300 hover:rotate-12">
+          <span class="material-symbols-outlined text-[22px]">shield</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <h1 class="text-base font-semibold tracking-tight text-white">Multi-Vector Threat Detection Engine</h1>
+          <div
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="text-xs font-medium text-emerald-400 tracking-wide">System Active</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="hidden sm:flex flex-col text-right">
+          <span class="text-xs font-medium text-slate-200">Executive Console</span>
+          <span class="text-[11px] text-slate-400 font-mono">SOC Node 01 • v2.4 Final</span>
+        </div>
+        <div
+          class="w-8 h-8 rounded-full bg-slate-800/80 border border-slate-700/80 flex items-center justify-center text-slate-300 transition-colors hover:border-sky-500/50 hover:text-sky-300">
+          <span class="material-symbols-outlined text-[18px]">verified_user</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-6xl mx-auto px-6 py-10 space-y-10 relative z-10">
+
+    <!-- 2. Central Upload Hero Zone (with Conic Border Glow) -->
+    <section
+      class="neon-border-box p-[1.5px] rounded-2xl shadow-2xl shadow-black/80 tilt-card transition-all duration-300"
+      id="uploadNeonContainer">
+      <div
+        class="neon-inner-content relative rounded-2xl border border-slate-800/90 bg-slate-900/60 backdrop-blur-2xl p-8 md:p-10 overflow-hidden">
+        <div
+          class="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-40 bg-sky-500/15 rounded-full blur-3xl pointer-events-none">
+        </div>
+
+        <div class="relative flex flex-col items-center text-center max-w-2xl mx-auto">
+          <input type="file" id="fileInput" multiple class="hidden" onchange="handleFileSelect(event)" />
+
+          <!-- Interactive Drag & Drop Area -->
+          <div id="dropZone" onclick="document.getElementById('fileInput').click()" ondragover="handleDragOver(event)"
+            ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)"
+            class="relative w-full rounded-xl border-2 border-dashed border-slate-700/80 hover:border-sky-400/60 bg-slate-950/50 hover:bg-slate-950/80 p-8 transition-all duration-300 cursor-pointer group flex flex-col items-center overflow-hidden">
+
+            <div id="dropLaser" class="laser-beam hidden"></div>
+            <div id="dropScanOverlay" class="absolute inset-0 scan-mesh-overlay hidden pointer-events-none"></div>
+
+            <div
+              class="w-14 h-14 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 mb-4 group-hover:scale-110 group-hover:border-sky-400/40 transition-all duration-300 shadow-inner">
+              <span class="material-symbols-outlined text-[30px]" id="uploadIcon">cloud_upload</span>
+            </div>
+            <h2 class="text-lg font-semibold text-white tracking-tight mb-1" id="dropTitle">
+              Drop your files here, or <span
+                class="text-sky-400 underline underline-offset-4 font-medium group-hover:text-sky-300">browse from
+                computer</span>
+            </h2>
+            <p class="text-xs text-slate-400 max-w-md mt-1" id="dropSubtitle">
+              Supports Windows PE Binaries (.exe, .dll) and Raster Media (.png, .jpg)
+            </p>
+          </div>
+
+          <!-- Controls -->
+          <div class="mt-6 flex flex-wrap items-center justify-center gap-3 w-full max-w-md">
+            <div class="relative flex-1 min-w-[200px]">
+              <select id="modeSelect"
+                class="w-full appearance-none rounded-xl bg-slate-950/80 border border-slate-700/80 px-4 py-2.5 text-xs font-medium text-slate-200 focus:outline-none focus:border-sky-400 transition-colors cursor-pointer">
+                <option value="auto">Auto-Detect Format (Smart Magic-Bytes)</option>
+                <option value="executable">Vector A (PE Executable / Grad-CAM)</option>
+                <option value="media">Vector B (Media / Shannon Entropy)</option>
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-400">
+                <span class="material-symbols-outlined text-[18px]">expand_more</span>
+              </div>
+            </div>
+            <button id="scanBtn" onclick="runTriage()"
+              class="px-6 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 active:scale-95 text-slate-950 text-xs font-semibold tracking-wide flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(56,189,248,0.35)] hover:shadow-[0_0_28px_rgba(56,189,248,0.5)]"
+              type="button">
+              <span class="material-symbols-outlined text-[18px]" id="scanBtnIcon">bolt</span>
+              <span id="scanBtnText">Scan File</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Impactful 2-Second Neural Triage Stage Sequence HUD -->
+    <div id="loadingIndicator"
+      class="hidden rounded-2xl border border-sky-500/40 bg-slate-900/85 backdrop-blur-2xl p-8 text-center space-y-5 shadow-2xl relative overflow-hidden animate-reveal">
+      <div class="laser-beam"></div>
+
+      <div
+        class="relative inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-sky-500/10 border border-sky-500/30 text-sky-400 shadow-[0_0_25px_rgba(56,189,248,0.35)]">
+        <span class="material-symbols-outlined text-[32px] animate-spin">memory</span>
+        <div class="absolute -inset-1 rounded-2xl bg-sky-400/20 blur-md pointer-events-none"></div>
+      </div>
+
+      <div class="space-y-1.5 max-w-lg mx-auto">
+        <div
+          class="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-400 text-[11px] font-mono tracking-wider font-semibold"
+          id="scanPhaseBadge">
+          PHASE 01 // BYTE STREAM PARSING
+        </div>
+        <p class="text-base text-white font-semibold tracking-wide mt-1" id="scanStepTitle">Deconstructing Raw Byte
+          Stream...</p>
+        <p class="text-xs text-slate-400 font-mono" id="scanStepSubtitle">Extracting PE section headers & computing
+          uncompressed Shannon entropy distribution</p>
+      </div>
+
+      <!-- High-Precision Telemetry Step Indicators -->
+      <div class="flex justify-center items-center gap-3 text-[11px] font-mono text-slate-400 py-1">
+        <span id="stepDot1"
+          class="px-2.5 py-1 rounded-md bg-sky-500/20 text-sky-300 border border-sky-500/40 flex items-center gap-1.5 font-semibold">
+          <span class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping"></span> 1. Ingestion
+        </span>
+        <span class="text-slate-600">&rarr;</span>
+        <span id="stepDot2" class="px-2.5 py-1 rounded-md bg-slate-800 text-slate-500 border border-slate-700/60">
+          2. Nataraj Texture
+        </span>
+        <span class="text-slate-600">&rarr;</span>
+        <span id="stepDot3" class="px-2.5 py-1 rounded-md bg-slate-800 text-slate-500 border border-slate-700/60">
+          3. ConvNet & Grad-CAM
+        </span>
+      </div>
+
+      <div class="w-80 h-1.5 bg-slate-800 rounded-full mx-auto overflow-hidden relative shadow-inner">
+        <div id="scanProgressBar"
+          class="h-full bg-gradient-to-r from-sky-400 via-indigo-500 to-sky-300 rounded-full transition-all duration-500 ease-out w-1/4">
+        </div>
+      </div>
+    </div>
+
+    <!-- Error Callout Banner -->
+    <div id="errorBanner"
+      class="hidden rounded-xl border border-rose-500/40 bg-rose-950/40 backdrop-blur-md p-5 text-rose-300 text-xs font-mono animate-reveal">
+    </div>
+
+    <!-- 3. Big, Unmistakable Verdict Card & Visual Proof (Single File View) -->
+    <div id="singleFileView" class="space-y-10">
+
+      <!-- Verdict Card Container with Dynamic Glow -->
+      <section class="neon-border-box p-[1.5px] rounded-2xl shadow-2xl tilt-card" id="verdictNeonContainer">
+        <div id="verdictCard"
+          class="neon-inner-content rounded-2xl border border-rose-500/30 bg-slate-900/70 backdrop-blur-2xl p-8 md:p-10 relative overflow-hidden transition-all duration-500">
+          <div id="ambientGlow"
+            class="absolute -right-20 -top-20 w-80 h-80 bg-rose-500/15 rounded-full blur-3xl pointer-events-none transition-all duration-500">
+          </div>
+
+          <div class="relative flex flex-col gap-8">
+            <!-- Verdict Banner & Status Indicator -->
+            <div
+              class="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-800/80">
+              <div class="flex items-center gap-4">
+                <div id="verdictIconContainer"
+                  class="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-500 shadow-[0_0_24px_rgba(244,63,94,0.25)] shrink-0 transition-transform duration-300">
+                  <span class="material-symbols-outlined text-[32px]" id="verdictIcon">warning</span>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2.5">
+                    <span class="text-xs font-semibold tracking-wider uppercase text-rose-400"
+                      id="verdictCategory">Classification Result</span>
+                    <span
+                      class="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 text-[11px] font-medium border border-rose-500/30"
+                      id="verdictActionBadge">Action Taken</span>
+                  </div>
+                  <h3 class="text-2xl sm:text-3xl font-bold text-rose-400 tracking-tight mt-0.5" id="verdictTitle">
+                    THREAT DETECTED
+                  </h3>
+                </div>
+              </div>
+
+              <!-- Status Pills -->
+              <div
+                class="flex items-center p-1 rounded-xl bg-slate-950/80 border border-slate-800 self-start md:self-auto shadow-inner">
+                <div id="pillClean"
+                  class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 transition-all duration-300">Clean
+                </div>
+                <div id="pillSuspicious"
+                  class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 transition-all duration-300">
+                  Suspicious</div>
+                <div id="pillThreat"
+                  class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-500 text-white shadow-[0_0_12px_rgba(244,63,94,0.4)] transition-all duration-300">
+                  Critical Threat</div>
+              </div>
+            </div>
+
+            <!-- Plain-English AI Intelligence Briefing with Typing Effect -->
+            <div class="bg-slate-950/60 rounded-xl p-5 border border-slate-800/90 space-y-2 backdrop-blur-md">
+              <div class="flex items-start gap-3">
+                <span
+                  class="material-symbols-outlined text-sky-400 text-[20px] mt-0.5 shrink-0 animate-bounce">smart_toy</span>
+                <div class="space-y-1.5 text-sm text-slate-200 leading-relaxed font-mono text-xs sm:text-sm">
+                  <p>
+                    <strong class="text-white font-sans font-semibold">What is this file?</strong>
+                    <span id="aiSummaryWhat" class="text-slate-300"> Upload a target file above to initiate
+                      zero-execution neural tensor and entropy triage.</span>
+                  </p>
+                  <p>
+                    <strong class="text-white font-sans font-semibold">What should you do?</strong>
+                    <span id="aiSummaryAction" class="text-slate-300"> Awaiting file input for security
+                      inspection.</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Key Metric Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div
+                class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 flex flex-col justify-between tilt-card">
+                <span class="text-xs font-medium text-slate-400">Analyzed File</span>
+                <div class="mt-2">
+                  <p class="text-sm font-semibold text-white truncate font-mono" id="metricFilename">sample_payload.exe
+                  </p>
+                  <span class="text-xs text-slate-400 font-mono" id="metricMeta">PE32 Executable</span>
+                </div>
+              </div>
+
+              <div
+                class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 flex flex-col justify-between tilt-card">
+                <span class="text-xs font-medium text-slate-400">Detection Type</span>
+                <div class="mt-2">
+                  <p class="text-sm font-semibold text-white" id="metricType">Executable Binary Analysis</p>
+                  <span class="text-xs text-slate-400 font-mono" id="metricSubtype">ResNet-50 Pattern Match</span>
+                </div>
+              </div>
+
+              <div
+                class="p-4 rounded-xl bg-slate-950/70 border border-rose-500/20 flex items-center justify-between tilt-card"
+                id="metricScoreCard">
+                <div>
+                  <span class="text-xs font-medium text-slate-400">Threat Score</span>
+                  <div class="mt-1">
+                    <span class="text-2xl font-bold text-rose-400 font-mono" id="metricScoreValue">0%</span>
+                    <span class="text-xs font-medium text-rose-300 block" id="metricScoreLabel">Standby</span>
+                  </div>
+                </div>
+                <!-- Visual Circular Meter Badge -->
+                <div class="relative w-12 h-12 flex items-center justify-center">
+                  <svg class="w-12 h-12 -rotate-90" viewBox="0 0 36 36">
+                    <circle cx="18" cy="18" fill="none" r="14" stroke="#1e293b" stroke-width="3.5"></circle>
+                    <circle id="scoreCircle" cx="18" cy="18" fill="none" r="14" stroke="#f43f5e"
+                      stroke-dasharray="0, 100" stroke-linecap="round" stroke-width="3.5"
+                      class="transition-all duration-1000 ease-out"></circle>
+                  </svg>
+                  <span class="absolute text-[11px] font-bold text-rose-300 font-mono" id="metricScoreNumber">0</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="pt-2 flex flex-wrap items-center justify-between gap-4">
+              <div class="flex items-center gap-3">
+                <button onclick="handleQuarantine()"
+                  class="px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-95 text-white text-xs font-semibold tracking-wide flex items-center gap-2 transition-all shadow-[0_0_18px_rgba(244,63,94,0.35)]"
+                  type="button">
+                  <span class="material-symbols-outlined text-[18px]">lock</span>
+                  <span>Quarantine File</span>
+                </button>
+                <button onclick="window.print()"
+                  class="px-4 py-2.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors flex items-center gap-1.5"
+                  type="button">
+                  <span class="material-symbols-outlined text-[18px]">description</span>
+                  <span>Print Executive Report</span>
+                </button>
+              </div>
+              <span class="text-xs text-slate-400 font-mono" id="incidentId">Incident ID: #IR-99042-X</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. Visual Proof Side-by-Side (HUD Radar Scanning Viewports) -->
+      <section class="space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-lg font-semibold text-white tracking-tight">Visual AI Inspection Proof</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Direct comparison between spatial byte structure and neural
+              attention focus</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Left Visual: File As An Image -->
+          <div
+            class="rounded-2xl border border-slate-800/90 bg-slate-900/70 backdrop-blur-2xl p-5 shadow-xl flex flex-col tilt-card group">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-medium text-slate-200 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
+                File As An Image (Binary Pattern)
+              </span>
+              <span class="text-[11px] font-mono text-slate-400" id="matrixDimensions">224x224 Grayscale</span>
+            </div>
+
+            <div
+              class="relative w-full aspect-square rounded-xl bg-[#040711] border border-slate-800/80 p-3 flex flex-col justify-center items-center overflow-hidden shadow-inner">
+              <div id="matrixLaser" class="laser-beam hidden"></div>
+              <div id="matrixRadar" class="radar-sweep-line hidden"></div>
+
+              <img id="matrixImg"
+                src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='224' height='224' fill='%23080d1a'><rect width='224' height='224'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23475569' font-family='sans-serif' font-size='12'>Awaiting Ingestion</text></svg>"
+                alt="Binary Matrix"
+                class="w-full h-full object-contain rounded-lg transition-transform duration-500 group-hover:scale-[1.03]" />
+
+              <div
+                class="absolute bottom-6 left-6 right-6 p-2.5 rounded-lg bg-slate-950/90 border border-slate-700/60 backdrop-blur-md flex items-center justify-between text-xs z-20">
+                <span class="text-slate-300 font-semibold flex items-center gap-1.5" id="matrixStatusLabel">
+                  <span class="material-symbols-outlined text-[16px] text-sky-400">memory</span>
+                  Spatial Byte Projection
+                </span>
+                <span class="font-mono text-slate-400 text-[11px]" id="matrixSublabel">Nataraj Mapping</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Visual: AI Attention Heatmap -->
+          <div
+            class="rounded-2xl border border-slate-800/90 bg-slate-900/70 backdrop-blur-2xl p-5 shadow-xl flex flex-col tilt-card group">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-medium text-rose-300 flex items-center gap-2" id="heatmapCardTitle">
+                <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                AI Attention Heatmap (Where Threat Was Found)
+              </span>
+              <span class="text-[11px] font-mono text-slate-400">Grad-CAM Focus</span>
+            </div>
+
+            <div
+              class="relative w-full aspect-square rounded-xl bg-[#040711] border border-rose-500/30 p-3 flex flex-col justify-center items-center overflow-hidden shadow-[0_0_24px_rgba(244,63,94,0.12)]"
+              id="heatmapBox">
+              <div id="heatmapLaser" class="laser-beam hidden"></div>
+              <div id="heatmapRadar" class="radar-sweep-line hidden"></div>
+
+              <img id="heatmapImg"
+                src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='224' height='224' fill='%23080d1a'><rect width='224' height='224'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23475569' font-family='sans-serif' font-size='12'>Awaiting Inference</text></svg>"
+                alt="Grad-CAM Heatmap"
+                class="w-full h-full object-contain rounded-lg transition-transform duration-500 group-hover:scale-[1.03]" />
+
+              <div
+                class="absolute bottom-6 right-6 px-3 py-1.5 rounded-lg bg-slate-950/90 border border-slate-700/70 backdrop-blur-md flex items-center gap-2 text-[11px] font-mono z-20">
+                <span class="text-sky-400">Benign</span>
+                <div class="w-12 h-1.5 rounded-full bg-gradient-to-r from-sky-400 via-amber-400 to-rose-500"></div>
+                <span class="text-rose-400 font-bold">Malicious</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p class="text-xs text-center text-slate-400 font-sans pt-2">
+          Our neural network converts files into visual structures to spot hidden code that traditional antivirus
+          scanners miss.
+        </p>
+      </section>
+    </div>
+
+    <!-- 5. High-Throughput Batch Manifest Section -->
+    <section id="batchView"
+      class="hidden rounded-2xl border border-slate-800/90 bg-slate-900/75 backdrop-blur-2xl p-8 shadow-2xl space-y-6 tilt-card animate-reveal">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+        <div>
+          <h2 class="text-lg font-semibold text-white tracking-tight flex items-center gap-2">
+            <span class="material-symbols-outlined text-sky-400 text-[22px]">list_alt</span>
+            Batch Triage Manifest Report
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">Asynchronous high-throughput queue results across all submitted
+            targets</p>
+        </div>
+        <span id="batchCountBadge"
+          class="px-3 py-1 rounded-full text-xs font-mono font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30 self-start sm:self-auto">
+          0 Files Triaged
+        </span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead>
+            <tr class="border-b border-slate-800 text-slate-400 uppercase tracking-wider font-mono text-[11px]">
+              <th class="py-3 px-4">Filename</th>
+              <th class="py-3 px-4">Format / Vector</th>
+              <th class="py-3 px-4">Spoofed</th>
+              <th class="py-3 px-4">Triage Verdict</th>
+              <th class="py-3 px-4">Classification / Entropy</th>
+              <th class="py-3 px-4">Confidence</th>
+            </tr>
+          </thead>
+          <tbody id="batchTableBody" class="divide-y divide-slate-800/60 font-mono"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <footer
+    class="w-full border-t border-slate-800/80 py-6 mt-16 text-center text-xs text-slate-400 font-mono relative z-10">
+    Multi-Vector Threat Detection Engine • Autonomous Executive Console
+  </footer>
+
+  <!-- Script Engine with 2-Second Choregraphed Stage Animations -->
+  <script>
+    const API_BASE = 'https://teem5002-threat-detection-backend.hf.space';
+
+    /* =========================================================
+       1. Dynamic Cyber Mesh Background (Interactive Neural Field)
+       ========================================================= */
+    const canvas = document.getElementById('bgCanvas');
+    const ctx = canvas.getContext('2d');
+    let width = 0, height = 0;
+    let dpr = window.devicePixelRatio || 1;
+
+    function resizeCanvas() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    const particles = [];
+    const shockwaves = [];
+    const dataPackets = [];
+    const ambientHexes = [];
+
+    const PARTICLE_COUNT = Math.min(width < 768 ? 55 : 110, 130);
+    const HEX_SYMBOLS = ["0x00", "0xFF", "MZ", "PE", "NOP", "7F", "E8", "CC", "55", "89", "C3", "RET", "JMP", "XOR"];
+
+    for (let i = 0; i < 30; i++) {
+      ambientHexes.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        text: HEX_SYMBOLS[Math.floor(Math.random() * HEX_SYMBOLS.length)],
+        vy: (Math.random() * 0.35) + 0.15,
+        alpha: Math.random() * 0.22 + 0.08,
+        size: Math.floor(Math.random() * 3) + 10
+      });
+    }
+
+    class Particle {
+      constructor() {
+        this.x = Math.random() * width;
+        this.y = Math.random() * height;
+        this.originX = this.x;
+        this.originY = this.y;
+        this.vx = (Math.random() - 0.5) * 0.75;
+        this.vy = (Math.random() - 0.5) * 0.75;
+        this.radius = Math.random() * 2.2 + 1.2;
+        this.isHub = Math.random() > 0.85;
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+
+        if (this.x < 0 || this.x > width) this.vx *= -1;
+        if (this.y < 0 || this.y > height) this.vy *= -1;
+
+        const dx = mouseX - this.x;
+        const dy = mouseY - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const maxDist = 200;
+
+        if (dist < maxDist && dist > 0) {
+          const force = (1 - dist / maxDist) * 3.5;
+          this.x -= (dx / dist) * force;
+          this.y -= (dy / dist) * force;
+        }
+      }
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.isHub ? this.radius * 1.8 : this.radius, 0, Math.PI * 2);
+        if (this.isHub) {
+          ctx.fillStyle = 'rgba(56, 189, 248, 1)';
+          ctx.shadowColor = 'rgba(56, 189, 248, 0.9)';
+          ctx.shadowBlur = 12;
+        } else {
+          ctx.fillStyle = 'rgba(129, 140, 248, 0.7)';
+          ctx.shadowBlur = 0;
+        }
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    class DataPacket {
+      constructor(p1, p2) {
+        this.p1 = p1;
+        this.p2 = p2;
+        this.progress = 0;
+        this.speed = Math.random() * 0.025 + 0.015;
+      }
+      update() {
+        this.progress += this.speed;
+      }
+      draw() {
+        const cx = this.p1.x + (this.p2.x - this.p1.x) * this.progress;
+        const cy = this.p1.y + (this.p2.y - this.p1.y) * this.progress;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#38bdf8';
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 10;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    class Shockwave {
+      constructor(x, y, color = 'rgba(56, 189, 248,') {
+        this.x = x;
+        this.y = y;
+        this.radius = 5;
+        this.maxRadius = 260;
+        this.opacity = 0.95;
+        this.color = color;
+      }
+      update() {
+        this.radius += 7.0;
+        this.opacity -= 0.022;
+      }
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = `${this.color} ${Math.max(0, this.opacity)})`;
+        ctx.lineWidth = 3;
+        ctx.shadowColor = this.color.includes('244') ? '#f43f5e' : '#38bdf8';
+        ctx.shadowBlur = 16;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      particles.push(new Particle());
+    }
+
+    let mouseX = -1000;
+    let mouseY = -1000;
+
+    function triggerShockwave(x, y, color) {
+      shockwaves.push(new Shockwave(x, y, color));
+    }
+
+    window.addEventListener('click', (e) => {
+      triggerShockwave(e.clientX, e.clientY, 'rgba(56, 189, 248,');
+    });
+
+    function animateBackground() {
+      const bgGrad = ctx.createRadialGradient(width / 2, height / 2, 50, width / 2, height / 2, Math.max(width, height) * 0.75);
+      bgGrad.addColorStop(0, '#0a1226');
+      bgGrad.addColorStop(0.5, '#050a16');
+      bgGrad.addColorStop(1, '#020409');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, width, height);
+
+      // Subtle Cyber Grid
+      ctx.lineWidth = 0.4;
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.035)';
+      const gridSize = 45;
+      for (let x = 0; x < width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+
+      // Floating hex text
+      ctx.font = '10px "JetBrains Mono", monospace';
+      for (let i = 0; i < ambientHexes.length; i++) {
+        const h = ambientHexes[i];
+        h.y += h.vy;
+        if (h.y > height) {
+          h.y = -20;
+          h.x = Math.random() * width;
+        }
+        ctx.fillStyle = `rgba(56, 189, 248, ${h.alpha})`;
+        ctx.fillText(h.text, h.x, h.y);
+      }
+
+      // Shockwaves
+      for (let i = shockwaves.length - 1; i >= 0; i--) {
+        shockwaves[i].update();
+        shockwaves[i].draw();
+        if (shockwaves[i].opacity <= 0 || shockwaves[i].radius >= shockwaves[i].maxRadius) {
+          shockwaves.splice(i, 1);
+        }
+      }
+
+      // Particles & Mesh
+      for (let i = 0; i < particles.length; i++) {
+        particles[i].update();
+        particles[i].draw();
+
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist < 145) {
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            const lineAlpha = (1 - dist / 145) * (particles[i].isHub || particles[j].isHub ? 0.45 : 0.22);
+            ctx.strokeStyle = `rgba(56, 189, 248, ${lineAlpha})`;
+            ctx.lineWidth = particles[i].isHub || particles[j].isHub ? 1.0 : 0.6;
+            ctx.stroke();
+
+            if (Math.random() < 0.0018 && dataPackets.length < 24) {
+              dataPackets.push(new DataPacket(particles[i], particles[j]));
+            }
+          }
+        }
+
+        const mdx = particles[i].x - mouseX;
+        const mdy = particles[i].y - mouseY;
+        const mdist = Math.sqrt(mdx * mdx + mdy * mdy);
+        if (mdist < 190) {
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(mouseX, mouseY);
+          const cursorLineAlpha = (1 - mdist / 190) * 0.55;
+          ctx.strokeStyle = `rgba(56, 189, 248, ${cursorLineAlpha})`;
+          ctx.lineWidth = 1.0;
+          ctx.stroke();
+        }
+      }
+
+      // Data Packets
+      for (let i = dataPackets.length - 1; i >= 0; i--) {
+        dataPackets[i].update();
+        dataPackets[i].draw();
+        if (dataPackets[i].progress >= 1) {
+          dataPackets.splice(i, 1);
+        }
+      }
+
+      requestAnimationFrame(animateBackground);
+    }
+    animateBackground();
+
+
+    /* =========================================================
+       2. Precision Pointer Reticle, Spotlight & 3D Tilt
+       ========================================================= */
+    const spotlight = document.getElementById('cursorSpotlight');
+    const dot = document.getElementById('cyberDot');
+    const ring = document.getElementById('cyberRing');
+
+    window.addEventListener('mousemove', (e) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+
+      spotlight.style.left = `${e.clientX}px`;
+      spotlight.style.top = `${e.clientY}px`;
+      dot.style.left = `${e.clientX}px`;
+      dot.style.top = `${e.clientY}px`;
+      ring.style.left = `${e.clientX}px`;
+      ring.style.top = `${e.clientY}px`;
+    });
+
+    document.querySelectorAll('.tilt-card').forEach(card => {
+      card.addEventListener('mousemove', (e) => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left - rect.width / 2;
+        const y = e.clientY - rect.top - rect.height / 2;
+        const rotateX = (-y / (rect.height / 2)) * 3;
+        const rotateY = (x / (rect.width / 2)) * 3;
+        card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-2px)`;
+      });
+      card.addEventListener('mouseleave', () => {
+        card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0)';
+      });
+    });
+
+
+    /* =========================================================
+       3. Cyber Text Decryptor & Rolling Counter Animations
+       ========================================================= */
+    const CYBER_CHARS = "ABCDEF0123456789!<>-_\\/[]{}—=+*^?#";
+
+    function decryptTextAnimation(element, targetText, duration = 800) {
+      const startTime = performance.now();
+      const length = targetText.length;
+
+      function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const revealedChars = Math.floor(progress * length);
+
+        let scrambled = targetText.substring(0, revealedChars);
+        for (let i = revealedChars; i < length; i++) {
+          if (targetText[i] === ' ') {
+            scrambled += ' ';
+          } else {
+            scrambled += CYBER_CHARS[Math.floor(Math.random() * CYBER_CHARS.length)];
+          }
+        }
+        element.innerText = scrambled;
+
+        if (progress < 1) {
+          requestAnimationFrame(update);
+        } else {
+          element.innerText = targetText;
+        }
+      }
+      requestAnimationFrame(update);
+    }
+
+    function animateRollingScore(finalScore, isThreat) {
+      const scoreVal = document.getElementById('metricScoreValue');
+      const scoreNum = document.getElementById('metricScoreNumber');
+      const scoreCircle = document.getElementById('scoreCircle');
+
+      let current = 0;
+      const duration = 1200;
+      const start = performance.now();
+
+      function update(now) {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        current = Math.round(easeOut * finalScore);
+
+        scoreVal.innerText = `${current}%`;
+        scoreNum.innerText = current;
+        scoreCircle.setAttribute('stroke-dasharray', `${current}, 100`);
+
+        if (progress < 1) {
+          requestAnimationFrame(update);
+        } else {
+          scoreVal.innerText = `${finalScore}%`;
+          scoreNum.innerText = finalScore;
+          scoreCircle.setAttribute('stroke-dasharray', `${finalScore}, 100`);
+        }
+      }
+      requestAnimationFrame(update);
+    }
+
+
+    /* =========================================================
+       4. File Ingestion & Drag/Drop Handlers
+       ========================================================= */
+    function handleFileSelect(e) {
+      const files = e.target.files;
+      updateDropZoneText(files);
+      triggerShockwave(width / 2, 280, 'rgba(56, 189, 248,');
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault();
+      document.getElementById('dropZone').classList.add('border-sky-400', 'bg-slate-900/80', 'scale-[1.01]');
+    }
+
+    function handleDragLeave(e) {
+      e.preventDefault();
+      document.getElementById('dropZone').classList.remove('border-sky-400', 'bg-slate-900/80', 'scale-[1.01]');
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      document.getElementById('dropZone').classList.remove('border-sky-400', 'bg-slate-900/80', 'scale-[1.01]');
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        document.getElementById('fileInput').files = e.dataTransfer.files;
+        updateDropZoneText(e.dataTransfer.files);
+        triggerShockwave(e.clientX, e.clientY, 'rgba(56, 189, 248,');
+      }
+    }
+
+    function updateDropZoneText(files) {
+      if (!files || files.length === 0) return;
+      if (files.length === 1) {
+        document.getElementById('dropTitle').innerHTML = `Selected: <span class="text-sky-400 font-mono">${files[0].name}</span>`;
+        document.getElementById('dropSubtitle').innerText = `${(files[0].size / 1024).toFixed(1)} KB • Ready for neural triage`;
+      } else {
+        document.getElementById('dropTitle').innerHTML = `Batch Selected: <span class="text-sky-400 font-mono">${files.length} Files</span>`;
+        document.getElementById('dropSubtitle').innerText = `High-throughput asynchronous queue ready`;
+      }
+    }
+
+    function handleQuarantine() {
+      triggerShockwave(width / 2, height / 2, 'rgba(244, 63, 94,');
+      alert("Quarantine directive broadcasted: Host execution isolated and file flagged across SOC SIEM endpoints.");
+    }
+
+
+    /* =========================================================
+       5. Autonomous Triage Pipeline (with 2.0s Impact Choreography)
+       ========================================================= */
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    async function runTriage() {
+      const fileInput = document.getElementById('fileInput');
+      const modeSelect = document.getElementById('modeSelect');
+      const loading = document.getElementById('loadingIndicator');
+      const errorBanner = document.getElementById('errorBanner');
+      const singleView = document.getElementById('singleFileView');
+      const batchView = document.getElementById('batchView');
+
+      const uploadNeon = document.getElementById('uploadNeonContainer');
+      const dropLaser = document.getElementById('dropLaser');
+      const dropScanOverlay = document.getElementById('dropScanOverlay');
+      const matrixLaser = document.getElementById('matrixLaser');
+      const heatmapLaser = document.getElementById('heatmapLaser');
+      const matrixRadar = document.getElementById('matrixRadar');
+      const heatmapRadar = document.getElementById('heatmapRadar');
+      const scanBtnText = document.getElementById('scanBtnText');
+      const scanBtnIcon = document.getElementById('scanBtnIcon');
+
+      const progressBar = document.getElementById('scanProgressBar');
+      const phaseBadge = document.getElementById('scanPhaseBadge');
+      const stepTitle = document.getElementById('scanStepTitle');
+      const stepSubtitle = document.getElementById('scanStepSubtitle');
+      const stepDot1 = document.getElementById('stepDot1');
+      const stepDot2 = document.getElementById('stepDot2');
+      const stepDot3 = document.getElementById('stepDot3');
+
+      errorBanner.classList.add('hidden');
+      const files = fileInput.files;
+
+      if (!files || files.length === 0) {
+        errorBanner.innerText = "Please select or drop at least one target file for inspection.";
+        errorBanner.classList.remove('hidden');
+        return;
+      }
+
+      // Hide results cards during the scan to maximize impact on reveal
+      singleView.classList.add('hidden');
+      batchView.classList.add('hidden');
+
+      // Activate all visual scanning HUD systems
+      uploadNeon.classList.add('is-active');
+      dropLaser.classList.remove('hidden');
+      dropScanOverlay.classList.remove('hidden');
+      matrixLaser.classList.remove('hidden');
+      heatmapLaser.classList.remove('hidden');
+      matrixRadar.classList.remove('hidden');
+      heatmapRadar.classList.remove('hidden');
+      loading.classList.remove('hidden');
+
+      scanBtnText.innerText = "Scanning...";
+      scanBtnIcon.classList.add('animate-spin');
+
+      // Scroll to loading HUD so the panel focuses on the scanner
+      loading.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+      triggerShockwave(width / 2, 340, 'rgba(56, 189, 248,');
+
+      const formData = new FormData();
+      formData.append('analysis_mode', modeSelect.value);
+
+      // Start backend fetch in parallel with the choreographed 2-second visual phases
+      const fetchPromise = (async () => {
+        if (files.length === 1) {
+          formData.append('file', files[0]);
+          const res = await fetch(`${API_BASE}/api/analyze`, { method: 'POST', body: formData });
+          if (!res.ok) {
+            const errJson = await res.json().catch(() => ({}));
+            throw new Error(errJson.detail || `Server returned HTTP ${res.status}`);
+          }
+          return { type: 'single', data: await res.json() };
+        } else {
+          for (let i = 0; i < files.length; i++) {
+            formData.append('files', files[i]);
+          }
+          const res = await fetch(`${API_BASE}/api/analyze/batch`, { method: 'POST', body: formData });
+          if (!res.ok) {
+            const errJson = await res.json().catch(() => ({}));
+            throw new Error(errJson.detail || `Batch server returned HTTP ${res.status}`);
+          }
+          return { type: 'batch', data: await res.json() };
+        }
+      })();
+
+      try {
+        // --- STAGE 1: 0ms -> 700ms ---
+        phaseBadge.innerText = "PHASE 01 // BYTE STREAM PARSING";
+        stepTitle.innerText = "Extracting Raw Binary Byte Stream...";
+        stepSubtitle.innerText = "Sampling first 256 KB PE header & computing uncompressed Shannon entropy";
+        progressBar.style.width = '30%';
+        stepDot1.className = "px-2.5 py-1 rounded-md bg-sky-500/20 text-sky-300 border border-sky-500/40 flex items-center gap-1.5 font-semibold";
+        stepDot2.className = "px-2.5 py-1 rounded-md bg-slate-800 text-slate-500 border border-slate-700/60";
+        stepDot3.className = "px-2.5 py-1 rounded-md bg-slate-800 text-slate-500 border border-slate-700/60";
+        await sleep(700);
+
+        // --- STAGE 2: 700ms -> 1400ms ---
+        phaseBadge.innerText = "PHASE 02 // 2D SPATIAL PROJECTION";
+        stepTitle.innerText = "Constructing 2D Grayscale Texture Matrix...";
+        stepSubtitle.innerText = "Executing Nataraj et al. width heuristics & nearest-neighbor interpolation";
+        progressBar.style.width = '68%';
+        stepDot1.className = "px-2.5 py-1 rounded-md bg-slate-800 text-slate-400 border border-slate-700/60";
+        stepDot2.className = "px-2.5 py-1 rounded-md bg-sky-500/20 text-sky-300 border border-sky-500/40 flex items-center gap-1.5 font-semibold";
+        triggerShockwave(width / 2, 450, 'rgba(99, 102, 241,');
+        await sleep(700);
+
+        // --- STAGE 3: 1400ms -> 2100ms ---
+        phaseBadge.innerText = "PHASE 03 // CONVOLUTIONAL INFERENCE";
+        stepTitle.innerText = "Evaluating Convolutional Layer4 Activations...";
+        stepSubtitle.innerText = "Backpropagating gradients via Grad-CAM & verifying Authenticode signatures";
+        progressBar.style.width = '96%';
+        stepDot2.className = "px-2.5 py-1 rounded-md bg-slate-800 text-slate-400 border border-slate-700/60";
+        stepDot3.className = "px-2.5 py-1 rounded-md bg-sky-500/20 text-sky-300 border border-sky-500/40 flex items-center gap-1.5 font-semibold";
+        await sleep(700);
+
+        // Await the backend response (will already be resolved or finishing)
+        const result = await fetchPromise;
+
+        progressBar.style.width = '100%';
+        await sleep(200);
+
+        // Render Results
+        if (result.type === 'single') {
+          renderSingleView(result.data);
+          singleView.classList.remove('hidden');
+          batchView.classList.add('hidden');
+          document.getElementById('verdictNeonContainer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+          renderBatchView(result.data);
+          singleView.classList.add('hidden');
+          batchView.classList.remove('hidden');
+          document.getElementById('batchView').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+      } catch (err) {
+        errorBanner.innerText = `Triage Fault: ${err.message}`;
+        errorBanner.classList.remove('hidden');
+      } finally {
+        uploadNeon.classList.remove('is-active');
+        dropLaser.classList.add('hidden');
+        dropScanOverlay.classList.add('hidden');
+        matrixLaser.classList.add('hidden');
+        heatmapLaser.classList.add('hidden');
+        matrixRadar.classList.add('hidden');
+        heatmapRadar.classList.add('hidden');
+        loading.classList.add('hidden');
+        scanBtnText.innerText = "Scan File";
+        scanBtnIcon.classList.remove('animate-spin');
+      }
+    }
+
+
+    /* =========================================================
+       6. Dynamic Presentation Rendering Engine
+       ========================================================= */
+    function renderSingleView(data) {
+      const isExec = data.threat_vector && data.threat_vector.includes("Executable");
+      const risk = String(data.risk_level || 'LOW').toUpperCase();
+      const verdict = String(data.verdict || 'BENIGN');
+      const isCritical = risk === 'CRITICAL' || risk === 'HIGH' || verdict.includes('MALICIOUS');
+      const isSuspicious = risk === 'MEDIUM' || verdict.includes('SUSPICIOUS');
+      const isSigned = verdict.includes('VERIFIED SIGNED');
+
+      document.getElementById('incidentId').innerText = `Incident ID: #IR-${Math.floor(10000 + Math.random() * 90000)}-X`;
+
+      const neonContainer = document.getElementById('verdictNeonContainer');
+      const card = document.getElementById('verdictCard');
+      const glow = document.getElementById('ambientGlow');
+      const iconBox = document.getElementById('verdictIconContainer');
+      const icon = document.getElementById('verdictIcon');
+      const title = document.getElementById('verdictTitle');
+      const category = document.getElementById('verdictCategory');
+      const badge = document.getElementById('verdictActionBadge');
+      const scoreCircle = document.getElementById('scoreCircle');
+      const scoreVal = document.getElementById('metricScoreValue');
+      const scoreLabel = document.getElementById('metricScoreLabel');
+
+      const pClean = document.getElementById('pillClean');
+      const pSusp = document.getElementById('pillSuspicious');
+      const pThreat = document.getElementById('pillThreat');
+      pClean.className = "px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400";
+      pSusp.className = "px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400";
+      pThreat.className = "px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400";
+
+      neonContainer.className = "neon-border-box p-[1.5px] rounded-2xl shadow-2xl tilt-card animate-reveal";
+
+      const vignette = document.getElementById('threatVignette');
+
+      if (isCritical) {
+        neonContainer.classList.add('is-threat');
+        card.className = "neon-inner-content rounded-2xl border border-rose-500/30 bg-slate-900/70 backdrop-blur-2xl p-8 md:p-10 relative overflow-hidden transition-all duration-500";
+        glow.className = "absolute -right-20 -top-20 w-80 h-80 bg-rose-500/15 rounded-full blur-3xl pointer-events-none";
+        iconBox.className = "w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-500 shadow-[0_0_24px_rgba(244,63,94,0.3)] shrink-0";
+        icon.innerText = "warning";
+        title.className = "text-2xl sm:text-3xl font-bold text-rose-400 tracking-tight mt-0.5";
+        title.innerText = "THREAT DETECTED";
+        category.className = "text-xs font-semibold tracking-wider uppercase text-rose-400";
+        badge.className = "px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 text-[11px] font-medium border border-rose-500/30";
+        badge.innerText = "Critical Alert";
+        pThreat.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-500 text-white shadow-[0_0_12px_rgba(244,63,94,0.45)]";
+
+        scoreCircle.setAttribute('stroke', '#f43f5e');
+        scoreVal.className = "text-2xl font-bold text-rose-400 font-mono";
+        scoreLabel.innerText = "Critical Risk";
+
+        triggerShockwave(width / 2, height / 2, 'rgba(244, 63, 94,');
+        vignette.style.opacity = '1';
+        setTimeout(() => { vignette.style.opacity = '0'; }, 1000);
+
+      } else if (isSuspicious) {
+        neonContainer.classList.add('is-active');
+        card.className = "neon-inner-content rounded-2xl border border-amber-500/30 bg-slate-900/70 backdrop-blur-2xl p-8 md:p-10 relative overflow-hidden transition-all duration-500";
+        glow.className = "absolute -right-20 -top-20 w-80 h-80 bg-amber-500/15 rounded-full blur-3xl pointer-events-none";
+        iconBox.className = "w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 shadow-[0_0_24px_rgba(245,158,11,0.3)] shrink-0";
+        icon.innerText = "report";
+        title.className = "text-2xl sm:text-3xl font-bold text-amber-400 tracking-tight mt-0.5";
+        title.innerText = "SUSPICIOUS ACTIVITY";
+        category.className = "text-xs font-semibold tracking-wider uppercase text-amber-400";
+        badge.className = "px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[11px] font-medium border border-amber-500/30";
+        badge.innerText = "Review Required";
+        pSusp.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 text-white shadow-[0_0_12px_rgba(245,158,11,0.45)]";
+
+        scoreCircle.setAttribute('stroke', '#f59e0b');
+        scoreVal.className = "text-2xl font-bold text-amber-400 font-mono";
+        scoreLabel.innerText = "Moderate Anomaly";
+
+        triggerShockwave(width / 2, height / 2, 'rgba(245, 158, 11,');
+
+      } else {
+        card.className = "neon-inner-content rounded-2xl border border-emerald-500/30 bg-slate-900/70 backdrop-blur-2xl p-8 md:p-10 relative overflow-hidden transition-all duration-500";
+        glow.className = "absolute -right-20 -top-20 w-80 h-80 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none";
+        iconBox.className = "w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-[0_0_24px_rgba(16,185,129,0.3)] shrink-0";
+        icon.innerText = isSigned ? "verified" : "check_circle";
+        title.className = "text-2xl sm:text-3xl font-bold text-emerald-400 tracking-tight mt-0.5";
+        title.innerText = isSigned ? "VERIFIED SIGNED SOFTWARE" : "CLEAN / BENIGN";
+        category.className = "text-xs font-semibold tracking-wider uppercase text-emerald-400";
+        badge.className = "px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-medium border border-emerald-500/30";
+        badge.innerText = isSigned ? "Authenticode Trusted" : "Passed Inspection";
+        pClean.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500 text-white shadow-[0_0_12px_rgba(16,185,129,0.45)]";
+
+        scoreCircle.setAttribute('stroke', '#10b981');
+        scoreVal.className = "text-2xl font-bold text-emerald-400 font-mono";
+        scoreLabel.innerText = "Low Security Risk";
+
+        triggerShockwave(width / 2, height / 2, 'rgba(16, 185, 129,');
+      }
+
+      // Plain-English AI Summary with Cyber Decryption
+      const ai = data.ai_analysis || {};
+      const whatEl = document.getElementById('aiSummaryWhat');
+      const actionEl = document.getElementById('aiSummaryAction');
+
+      decryptTextAnimation(whatEl, ` ${ai.executive_summary || 'Analysis complete with verified spatial byte mapping.'}`, 750);
+      decryptTextAnimation(actionEl, ` ${ai.recommended_action || 'Proceed with standard operational policy.'}`, 900);
+
+      // Populate Metadata
+      document.getElementById('metricFilename').innerText = data.filename || 'unknown_target';
+      document.getElementById('metricMeta').innerText = `${data.detected_format || 'PE'} ${data.extension_spoofed ? '• ⚠️ Extension Spoofed' : '• Normal Header'}`;
+
+      const familyName = (data.malware_family && data.malware_family !== 'None (Clean or Out-of-Distribution)')
+        ? data.malware_family
+        : (data.closest_match_family || 'Standard Clean Baseline');
+
+      document.getElementById('metricType').innerText = isExec ? familyName : (data.verdict || 'Media Signal');
+      document.getElementById('metricSubtype').innerText = isExec ? data.threat_vector : `Shannon Entropy: ${data.media_metrics ? data.media_metrics.shannon_entropy : 'N/A'}`;
+
+      // Rolling Counter Animation
+      const rawConfidence = data.confidence !== null && data.confidence !== undefined ? Math.round(data.confidence) : (isCritical ? 98 : 5);
+      animateRollingScore(rawConfidence, isCritical);
+
+      // Visual Images
+      const matrixImg = document.getElementById('matrixImg');
+      const heatmapImg = document.getElementById('heatmapImg');
+
+      if (data.binary_matrix_base64) {
+        matrixImg.src = data.binary_matrix_base64;
+      }
+      if (data.gradcam_heatmap_base64) {
+        heatmapImg.src = data.gradcam_heatmap_base64;
+      } else if (data.binary_matrix_base64) {
+        heatmapImg.src = data.binary_matrix_base64;
+      }
+
+      if (!isExec && data.media_metrics) {
+        document.getElementById('heatmapCardTitle').innerHTML = '<span class="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span> Media Forensics & LSB Extraction';
+        document.getElementById('matrixStatusLabel').innerHTML = '<span class="material-symbols-outlined text-[16px] text-sky-400">image</span> Raster Pixel Carrier';
+        document.getElementById('matrixSublabel').innerText = `Entropy ${data.media_metrics.shannon_entropy}`;
+      } else {
+        document.getElementById('heatmapCardTitle').innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span> AI Attention Heatmap (Where Threat Was Found)';
+        document.getElementById('matrixStatusLabel').innerHTML = '<span class="material-symbols-outlined text-[16px] text-sky-400">memory</span> Spatial Byte Projection';
+        document.getElementById('matrixSublabel').innerText = 'Nataraj Mapping';
+      }
+    }
+
+    function renderBatchView(data) {
+      const items = data.batch_triage_results || [];
+      document.getElementById('batchCountBadge').innerText = `${data.total_files_analyzed} Targets Triaged`;
+
+      const tbody = document.getElementById('batchTableBody');
+      tbody.innerHTML = items.map(item => {
+        if (item.status === 'PROCESSED') {
+          const v = String(item.verdict || 'BENIGN');
+          const isCrit = item.risk_level === 'CRITICAL' || item.risk_level === 'HIGH' || v.includes('MALICIOUS');
+          const isSusp = item.risk_level === 'MEDIUM' || v.includes('SUSPICIOUS');
+
+          let badgeClass = "bg-emerald-500/10 text-emerald-400 border-emerald-500/30";
+          if (isCrit) badgeClass = "bg-rose-500/10 text-rose-400 border-rose-500/30 shadow-[0_0_10px_rgba(244,63,94,0.2)]";
+          else if (isSusp) badgeClass = "bg-amber-500/10 text-amber-400 border-amber-500/30";
+
+          const spoofBadge = item.extension_spoofed
+            ? '<span class="text-rose-400 font-bold">⚠️ YES</span>'
+            : '<span class="text-slate-400">NO</span>';
+
+          const detail = item.malware_family || (item.shannon_entropy && item.shannon_entropy !== 'N/A' ? 'Entropy: ' + item.shannon_entropy : 'Clean Base');
+
+          return `
+            <tr class="hover:bg-slate-800/40 transition-colors">
+              <td class="py-3 px-4 font-semibold text-white">${item.filename}</td>
+              <td class="py-3 px-4 text-slate-400">${item.detected_format || 'N/A'}</td>
+              <td class="py-3 px-4">${spoofBadge}</td>
+              <td class="py-3 px-4">
+                <span class="px-2.5 py-1 rounded-lg text-[11px] font-bold border ${badgeClass}">
+                  ${item.verdict}
+                </span>
+              </td>
+              <td class="py-3 px-4 font-medium text-slate-300">${detail}</td>
+              <td class="py-3 px-4 font-bold ${isCrit ? 'text-rose-400' : 'text-slate-300'}">${item.confidence || 'N/A'}</td>
+            </tr>
+          `;
+        } else {
+          return `
+            <tr class="bg-rose-950/10 hover:bg-rose-950/20 transition-colors">
+              <td class="py-3 px-4 font-semibold text-slate-300">${item.filename}</td>
+              <td class="py-3 px-4 text-rose-400" colspan="2">${item.error || 'Unsupported file format.'}</td>
+              <td class="py-3 px-4">
+                <span class="px-2.5 py-1 rounded-lg text-[11px] font-bold border bg-rose-500/10 text-rose-400 border-rose-500/30">
+                  REJECTED
+                </span>
+              </td>
+              <td class="py-3 px-4 text-slate-500">—</td>
+              <td class="py-3 px-4 text-slate-500">N/A</td>
+            </tr>
+          `;
+        }
+      }).join('');
+    }
+  </script>
+</body>
+
+</html>
